@@ -1,43 +1,33 @@
 node {
-   
-   //Declare a global variable for mvnHome
-
-   stage('Version') { 
-
-	  //build job: 'version-check'
-          
+   stage('Extrair Codigo Fonte') {
+         echo 'Extraindo codigo fonte...'
+         checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/Bykiil/rock-paper-scissors.git']]])
    }
 
-   stage('Environment') {
-       
-       // build job: 'environment-check'
-       
+   stage('Build') {
+      echo 'Realizando o Build...'
+      echo 'Ola Maven'
+      sh '/opt/maven/bin/mvn clean install'
    }
 
-   stage('Document') {
-   
-	  //build job: 'document-roshambo', parameters: [booleanParam(name: 'generate_javadoc', value: false), stringParam(name: 'javadoc_location', value: 'C:\\_javadoc00')]
-
+   stage('Teste') {
+         echo 'Testando o codigo...'
+         sleep 4
    }
 
-   stage('Compile'){
-  
-       // build job: 'compile-roshambo'
-   }
-   
-   stage('Acceptance') {
-       
-         //def response = input message: 'UAT Tests',   parameters: [choice(choices: 'Pass\nFail', description: 'Proceed or Abort?', name: 'Pass or Fail?')]
-
-   }
-   
-   stage('Conclusion') {
-      def response = input message: 'Whatcha think?', parameters: [choice(choices: 'Yes\nNo', description: 'Proceed or Abort?', name: 'Wasn\'t that cool?')]
-        
-      if (response=="Yes") {
-         echo "I agree!"
-      } else {
-         echo "You are hard to please."
-      }
-   }
+   stage('Aprovação e Deploy') {
+        timeout(time: 2, unit: "HOURS") {
+            def userInput = input(
+                id: 'userInput', message: 'Aprova o Deploy ?', parameters: [
+                [$class: 'TextParameterDefinition', defaultValue: 'Não', description: 'Realizar Deploy ?', name: 'Executar'] ] )
+            echo (userInput)
+            if (userInput == 'Sim') {
+                echo 'Realizando o Deploy em Desenvolvimento...'
+                //build 'pedra-papel-tesoura'
+                deploy adapters: [tomcat9(credentialsId: '696e989e-e771-473e-ad6e-2f53e0e1f0b7', path: '', url: 'http://localhost:8080')], onFailure: false, contextPath: 'roshambo', war: '**/*.war'
+            } else {
+                echo 'O Deploy impedido'
+            }
+        }
+    }
 }
